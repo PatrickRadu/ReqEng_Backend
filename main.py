@@ -13,7 +13,7 @@ from db.db import init_db, SessionDep
 from model.models import User, UserLogin
 from config import settings
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 
 class Token(BaseModel):
     access_token: str
