@@ -1,4 +1,6 @@
+from datetime import datetime
 
+from markdown_it.rules_block import table
 from sqlmodel import SQLModel,Field
 from pydantic import BaseModel, EmailStr
 class UserLogin(BaseModel):
@@ -12,4 +14,9 @@ class User(SQLModel, table=True):
     full_name: str 
     role: str = Field(default="patient")
     hashed_password: str
-    
+
+class Appointment(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    doctor_id: int = Field(foreign_key="user.id", index=True)
+    patient_id: int = Field(foreign_key="user.id", index=True)
+    appointment_time: datetime

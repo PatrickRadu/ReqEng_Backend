@@ -10,7 +10,13 @@ from datetime import datetime, timedelta
 import jwt
 from fastapi.middleware.cors import CORSMiddleware
 from db.db import init_db, SessionDep
-from model.models import User, UserLogin
+from model.models import User, UserLogin, Appointment
+from model.AppointmentDTOs import (
+AppointmentCreate,
+AppointmentUpdate,
+AppointmentDoctorView,
+AppointmentPatientView
+)
 from config import settings
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
@@ -64,6 +70,13 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
     if user is None:
         raise HTTPException(status_code=401, detail="User not found")
     return user
+
+def require_role(role: str):
+    def checker(user: User = Depends(get_current_user)):
+        if user.role != role:
+            raise HTTPException(status_code=403, detail="Not enough permissions")
+        return user
+    return checker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -156,3 +169,100 @@ def hello_world(current_user: UserLogin = Depends(get_current_user)):
             "role": current_user.role
         }
     }
+
+@app.post("/appointments")
+def create_appointment(
+    request: AppointmentCreate,
+    session: SessionDep,
+    doctor: User = Depends(require_role("doctor"))
+):
+    patient = session.get(User, request.patient_id)
+    if not patient or patient.role != "patient":
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    appointment = Appointment(
+        doctor_id=doctor.id,
+        patient_id=request.patient_id,
+        appointment_time=request.appointment_time
+    )
+
+    session.add(appointment)
+    session.commit()
+    session.refresh(appointment)
+
+    return {"appointment_id": appointment.id}
+
+@app.put("/appointments/{appointment_id}")
+def update_appointment(
+    appointment_id: int,
+    request: AppointmentUpdate,
+    session: SessionDep,
+    doctor: User = Depends(require_role("doctor"))
+):
+    appointment = session.get(Appointment, appointment_id)
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    if appointment.doctor_id != doctor.id:
+        raise HTTPException(status_code=403, detail="Not your appointment")
+
+    if request.appointment_time:
+        appointment.appointment_time = request.appointment_time
+
+    session.commit()
+    return {"message": "Appointment updated"}
+
+@app.delete("/appointments/{appointment_id}")
+def delete_appointment(
+    appointment_id: int,
+    session: SessionDep,
+    doctor: User = Depends(require_role("doctor"))
+):
+    appointment = session.get(Appointment, appointment_id)
+    if not appointment:
+        raise HTTPException(status_code=404, detail="Appointment not found")
+
+    if appointment.doctor_id != doctor.id:
+        raise HTTPException(status_code=403, detail="Not your appointment")
+
+    session.delete(appointment)
+    session.commit()
+    return {"message": "Appointment deleted"}
+
+@app.get("/appointments/doctor", response_model=list[AppointmentDoctorView])
+def doctor_appointments(
+    session: SessionDep,
+    doctor: User = Depends(require_role("doctor"))
+):
+    appointments = session.exec(
+        select(Appointment).where(Appointment.doctor_id == doctor.id)
+    ).all()
+
+    return [
+        AppointmentDoctorView(
+            id=a.id,
+            appointment_time=a.appointment_time,
+            patient_name=session.get(User, a.patient_id).full_name,
+            patient_email=session.get(User, a.patient_id).email
+        )
+        for a in appointments
+    ]
+
+
+@app.get("/appointments/patient", response_model=list[AppointmentPatientView])
+def patient_appointments(
+    session: SessionDep,
+    patient: User = Depends(require_role("patient"))
+):
+    appointments = session.exec(
+        select(Appointment).where(Appointment.patient_id == patient.id)
+    ).all()
+
+    return [
+        AppointmentPatientView(
+            id=a.id,
+            appointment_time=a.appointment_time,
+            doctor_name=session.get(User, a.doctor_id).full_name
+        )
+        for a in appointments
+    ]
