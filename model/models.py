@@ -20,3 +20,12 @@ class Appointment(SQLModel, table=True):
     doctor_id: int = Field(foreign_key="user.id", index=True)
     patient_id: int = Field(foreign_key="user.id", index=True)
     appointment_time: datetime
+
+class ClinicalNote(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    content: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime | None = Field(default=None)
+    patient_id: int = Field(foreign_key="user.id")
+    psychologist_id: int = Field(foreign_key="user.id")
+    # appointment_id: int | None = Field(default=None, foreign_key="appointment.id")
