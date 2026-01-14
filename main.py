@@ -165,6 +165,17 @@ def login(request: UserLogin, session: SessionDep):
         }
     }
 
+@app.get("/users", response_model=List[User])
+def get_users(
+    role: str | None = None, 
+    session: SessionDep = None,
+    current_user: User = Depends(get_current_user) # Require login
+):
+    query = select(User)
+    if role:
+        query = query.where(User.role == role)
+    return session.exec(query).all()
+
 @app.get("/hello")
 def hello_world(current_user: UserLogin = Depends(get_current_user)):
     return {
