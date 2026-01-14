@@ -385,7 +385,7 @@ def get_notes(
     return results
 
 # get a single note by ID
-@app.get("/{note_id}",tags =["Clinical Notes"], response_model=NoteRead)
+@app.get("/notes/{note_id}",tags =["Clinical Notes"], response_model=NoteRead)
 def get_single_note(
     note_id: int, 
     session: SessionDep,
@@ -400,7 +400,7 @@ def get_single_note(
     )
 
 # update a clinical note
-@app.put("/{note_id}",tags =["Clinical Notes"], response_model=NoteRead)
+@app.put("/notes/update/{note_id}",tags =["Clinical Notes"], response_model=NoteRead)
 def update_note(
     note_id: int,
     update_data: NoteUpdate,
@@ -428,7 +428,7 @@ def update_note(
     )
 
 # delete a clinical note
-@app.delete("/{note_id}",tags =["Clinical Notes"])
+@app.delete("/notes/delete/{note_id}",tags =["Clinical Notes"])
 def delete_note(
     note_id: int,
     session: SessionDep,
