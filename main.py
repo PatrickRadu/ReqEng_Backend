@@ -179,7 +179,7 @@ def hello_world(current_user: UserLogin = Depends(get_current_user)):
 def create_appointment(
     request: AppointmentCreate,
     session: SessionDep,
-    doctor: User = Depends(require_role("doctor"))
+    doctor: User = Depends(require_role("psychologist"))
 ):
     patient = session.get(User, request.patient_id)
     if not patient or patient.role != "patient":
@@ -202,7 +202,7 @@ def update_appointment(
     appointment_id: int,
     request: AppointmentUpdate,
     session: SessionDep,
-    doctor: User = Depends(require_role("doctor"))
+    doctor: User = Depends(require_role("psychologist"))
 ):
     appointment = session.get(Appointment, appointment_id)
     if not appointment:
@@ -221,7 +221,7 @@ def update_appointment(
 def delete_appointment(
     appointment_id: int,
     session: SessionDep,
-    doctor: User = Depends(require_role("doctor"))
+    doctor: User = Depends(require_role("psychologist"))
 ):
     appointment = session.get(Appointment, appointment_id)
     if not appointment:
@@ -237,7 +237,7 @@ def delete_appointment(
 @app.get("/appointments/doctor", response_model=list[AppointmentDoctorView])
 def doctor_appointments(
     session: SessionDep,
-    doctor: User = Depends(require_role("doctor"))
+    doctor: User = Depends(require_role("psychologist"))
 ):
     appointments = session.exec(
         select(Appointment).where(Appointment.doctor_id == doctor.id)
@@ -278,7 +278,7 @@ def ensure_psychologist(current_user: User = Depends(get_current_user)) -> User:
     Validation: Hard stop if the user is not a psychologist.
     Used as a dependency in all write-operations.
     """
-    if current_user.role != "doctor":
+    if current_user.role != "psychologist":
         raise HTTPException(
             status_code=403, 
             detail="Access Forbidden: Only clinical staff can manage notes."
@@ -352,7 +352,7 @@ def get_notes(
     """
     Fetch notes. 
     - If patient_id is provided -> Shows patient history.
-    - If search is provided -> Global search for the doctor.
+    - If search is provided -> Global search for the psychologist.
     """
     query = select(ClinicalNote)
 
