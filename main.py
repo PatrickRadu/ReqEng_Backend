@@ -190,14 +190,18 @@ def hello_world(current_user: UserLogin = Depends(get_current_user)):
 def create_appointment(
     request: AppointmentCreate,
     session: SessionDep,
-    doctor: User = Depends(require_role("psychologist"))
+    doctor: User = Depends(require_role("patient"))
 ):
     patient = session.get(User, request.patient_id)
     if not patient or patient.role != "patient":
         raise HTTPException(status_code=404, detail="Patient not found")
+    
+    assigned_doctor = session.get(User, request.doctor_id)
+    if not assigned_doctor or assigned_doctor.role != "psychologist":
+        raise HTTPException(status_code=404, detail="Doctor not found")
 
     appointment = Appointment(
-        doctor_id=doctor.id,
+        doctor_id=request.doctor_id,
         patient_id=request.patient_id,
         appointment_time=request.appointment_time
     )
@@ -232,7 +236,7 @@ def update_appointment(
 def delete_appointment(
     appointment_id: int,
     session: SessionDep,
-    doctor: User = Depends(require_role("psychologist"))
+    doctor: User = Depends(require_role("patient"))
 ):
     appointment = session.get(Appointment, appointment_id)
     if not appointment:
